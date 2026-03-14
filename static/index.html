@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>flow — expense tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── TOKENS ────────────────────────────────────────────── */
+    :root {
+      --bg:        #edeff5;
+      --surface:   #e3e6ef;
+      --teal:      #90bcbc;
+      --teal-dim:  #7aabab;
+      --slate:     #6b7792;
+      --slate-dim: #8a96ae;
+      --text:      #3d4457;
+      --text-dim:  #8a96ae;
+      --positive:  #6aab8e;
+      --negative:  #bc7a7a;
+      --radius:    6px;
+      --mono:      'DM Mono', monospace;
+      --sans:      'DM Sans', sans-serif;
+    }
+
+    /* ── RESET ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 15px; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      min-height: 100vh;
+      padding: 0 1.5rem 4rem;
+    }
+
+    /* ── LAYOUT ────────────────────────────────────────────── */
+    .shell {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* ── HEADER ────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: baseline;
+      gap: 1.4rem;
+      padding: 2.4rem 0 2rem;
+      border-bottom: 1px solid var(--surface);
+      margin-bottom: 2rem;
+    }
+    .wordmark {
+      font-size: 1.15rem;
+      font-weight: 500;
+      color: var(--teal);
+      letter-spacing: .02em;
+    }
+    .wordmark span { color: var(--slate); font-weight: 300; }
+
+    nav { display: flex; gap: .2rem; margin-left: auto; }
+    nav button {
+      background: none;
+      border: none;
+      font-family: var(--mono);
+      font-size: .8rem;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: .3rem .7rem;
+      border-radius: var(--radius);
+      transition: color .15s, background .15s;
+    }
+    nav button:hover { color: var(--text); background: var(--surface); }
+    nav button.active { color: var(--teal); background: var(--surface); }
+
+    /* ── SUMMARY BAR ───────────────────────────────────────── */
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .75rem;
+      margin-bottom: 1.8rem;
+    }
+    .stat {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 1rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: .25rem;
+    }
+    .stat-label {
+      font-size: .7rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+    }
+    .stat-value {
+      font-size: 1.3rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .stat-value.pos { color: var(--positive); }
+    .stat-value.neg { color: var(--negative); }
+
+    /* ── TOOLBAR ───────────────────────────────────────────── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 1.2rem;
+      flex-wrap: wrap;
+    }
+    .toolbar select,
+    .toolbar input[type="month"],
+    .toolbar input[type="text"] {
+      background: var(--surface);
+      border: 1.5px solid transparent;
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: .8rem;
+      color: var(--text);
+      padding: .4rem .7rem;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .toolbar select:focus,
+    .toolbar input:focus {
+      border-color: var(--teal);
+    }
+    .toolbar select option { background: var(--bg); }
+
+    .btn {
+      font-family: var(--mono);
+      font-size: .8rem;
+      border: none;
+      border-radius: var(--radius);
+      padding: .45rem 1rem;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--teal); color: #fff; font-weight: 500; }
+    .btn-ghost { background: var(--surface); color: var(--slate); }
+    .btn-danger { background: var(--negative); color: #fff; }
+    .btn-sm { font-size: .72rem; padding: .28rem .65rem; }
+
+    /* ── TABLE ─────────────────────────────────────────────── */
+    .table-wrap {
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead th {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--text-dim);
+      padding: .7rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--bg);
+      font-weight: 400;
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--bg);
+      transition: background .1s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(144,188,188,.08); }
+    td {
+      padding: .65rem 1rem;
+      font-size: .82rem;
+      color: var(--text);
+      vertical-align: middle;
+    }
+    .tag {
+      display: inline-block;
+      font-size: .68rem;
+      padding: .15rem .45rem;
+      border-radius: 3px;
+      font-weight: 500;
+    }
+    .tag-in  { background: rgba(106,171,142,.18); color: var(--positive); }
+    .tag-out { background: rgba(188,122,122,.15); color: var(--negative); }
+    .amount-pos { color: var(--positive); }
+    .amount-neg { color: var(--negative); }
+    .cat-pill {
+      display: inline-block;
+      font-size: .68rem;
+      color: var(--slate-dim);
+      background: var(--bg);
+      border-radius: 3px;
+      padding: .1rem .4rem;
+    }
+    .actions { display: flex; gap: .4rem; }
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-dim);
+      font-size: .85rem;
+    }
+    .empty-state .hint { margin-top: .4rem; font-size: .75rem; opacity: .6; }
+
+    /* ── MODAL ─────────────────────────────────────────────── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(61,68,87,.35);
+      backdrop-filter: blur(3px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    .overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 2rem;
+      width: 420px;
+      max-width: calc(100vw - 2rem);
+      transform: translateY(12px);
+      transition: transform .2s;
+    }
+    .overlay.open .modal { transform: translateY(0); }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+    .modal-title {
+      font-size: .95rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .modal-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-dim); font-size: 1.1rem; line-height: 1;
+      padding: .2rem;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    /* ── FORM ──────────────────────────────────────────────── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .8rem;
+    }
+    .form-group { display: flex; flex-direction: column; gap: .3rem; }
+    .form-group.full { grid-column: 1 / -1; }
+    label {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-dim);
+    }
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select.form-select {
+      background: var(--surface);
+      border: 1.5px solid transparent;
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: .82rem;
+      color: var(--text);
+      padding: .5rem .7rem;
+      outline: none;
+      transition: border-color .15s;
+      width: 100%;
+    }
+    input:focus, select.form-select:focus { border-color: var(--teal); }
+    select.form-select option { background: var(--bg); }
+
+    /* type toggle */
+    .type-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .4rem;
+      margin-bottom: .2rem;
+    }
+    .type-btn {
+      font-family: var(--mono);
+      font-size: .78rem;
+      border: 1.5px solid var(--surface);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text-dim);
+      padding: .45rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all .15s;
+    }
+    .type-btn.active-in  { border-color: var(--positive); color: var(--positive); background: rgba(106,171,142,.1); }
+    .type-btn.active-out { border-color: var(--negative); color: var(--negative); background: rgba(188,122,122,.1); }
+
+    .modal-footer {
+      display: flex; justify-content: flex-end; gap: .6rem;
+      margin-top: 1.5rem;
+    }
+
+    /* ── TOAST ─────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 1.8rem; left: 50%; transform: translateX(-50%) translateY(60px);
+      background: var(--text);
+      color: var(--bg);
+      font-family: var(--mono);
+      font-size: .78rem;
+      padding: .55rem 1.2rem;
+      border-radius: 99px;
+      opacity: 0;
+      transition: opacity .2s, transform .25s;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 200;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── ANIMATIONS ────────────────────────────────────────── */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    tbody tr { animation: fadeIn .18s ease both; }
+
+    /* ── SCROLLBAR ─────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--slate-dim); border-radius: 3px; }
+
+    @media (max-width: 600px) {
+      .summary { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      td:nth-child(3), th:nth-child(3) { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- HEADER -->
+  <header>
+    <div class="wordmark">flow<span> / expenses</span></div>
+    <nav>
+      <button class="active" data-view="month" onclick="switchView('month')">month</button>
+      <button data-view="category" onclick="switchView('category')">category</button>
+      <button data-view="all" onclick="switchView('all')">all</button>
+    </nav>
+  </header>
+
+  <!-- SUMMARY -->
+  <div class="summary">
+    <div class="stat">
+      <span class="stat-label">income</span>
+      <span class="stat-value pos" id="sum-revenue">—</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">expenses</span>
+      <span class="stat-value neg" id="sum-expenses">—</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">net</span>
+      <span class="stat-value" id="sum-net">—</span>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <input type="month" id="month-picker" />
+    <select id="cat-picker" style="display:none">
+      <option value="">— pick category —</option>
+    </select>
+    <button class="btn btn-primary" onclick="openModal()">+ add</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>date</th>
+          <th>description</th>
+          <th>category</th>
+          <th>type</th>
+          <th style="text-align:right">amount</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tx-body">
+        <tr><td colspan="6" class="empty-state">loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- /shell -->
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">add transaction</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="type-toggle">
+      <button class="type-btn active-in" id="btn-revenue" onclick="setType(true)">+ income</button>
+      <button class="type-btn" id="btn-expense" onclick="setType(false)">− expense</button>
+    </div>
+
+    <div class="form-grid" style="margin-top:.8rem">
+      <div class="form-group">
+        <label>amount</label>
+        <input type="number" id="f-amount" step="0.01" min="0.01" placeholder="0.00" />
+      </div>
+      <div class="form-group">
+        <label>date</label>
+        <input type="date" id="f-date" />
+      </div>
+      <div class="form-group full">
+        <label>description</label>
+        <input type="text" id="f-desc" placeholder="what was this for?" />
+      </div>
+      <div class="form-group full">
+        <label>category</label>
+        <select class="form-select" id="f-cat"></select>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">cancel</button>
+      <button class="btn btn-primary" id="modal-submit" onclick="submitForm()">add</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+/* ── STATE ─────────────────────────────────────────── */
+let currentView = 'month';
+let editingId   = null;
+let isRevenue   = true;
+let categories  = [];
+
+const today = new Date();
+const thisMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+
+/* ── INIT ──────────────────────────────────────────── */
+async function init() {
+  document.getElementById('month-picker').value = thisMonth;
+  categories = await fetch('/api/categories').then(r => r.json());
+
+  const catPicker = document.getElementById('cat-picker');
+  const fCat = document.getElementById('f-cat');
+  categories.forEach(c => {
+    catPicker.innerHTML += `<option value="${c}">${c}</option>`;
+    fCat.innerHTML      += `<option value="${c}">${c}</option>`;
+  });
+
+  document.getElementById('month-picker').addEventListener('change', loadData);
+  document.getElementById('cat-picker').addEventListener('change', loadData);
+  document.getElementById('f-date').value = today.toISOString().split('T')[0];
+
+  loadData();
+}
+
+/* ── VIEW SWITCH ───────────────────────────────────── */
+function switchView(v) {
+  currentView = v;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  document.getElementById('month-picker').style.display = v === 'month' ? '' : 'none';
+  document.getElementById('cat-picker').style.display   = v === 'category' ? '' : 'none';
+  loadData();
+}
+
+/* ── LOAD DATA ─────────────────────────────────────── */
+async function loadData() {
+  let url = '/api/transactions';
+  let sumUrl = '/api/summary';
+
+  if (currentView === 'month') {
+    const m = document.getElementById('month-picker').value;
+    if (m) { url += `?month=${m}`; sumUrl += `?month=${m}`; }
+  } else if (currentView === 'category') {
+    const c = document.getElementById('cat-picker').value;
+    if (c) { url += `?category=${encodeURIComponent(c)}`; }
+  }
+
+  const [txs, sum] = await Promise.all([
+    fetch(url).then(r => r.json()),
+    fetch(sumUrl).then(r => r.json())
+  ]);
+
+  renderTable(txs);
+  renderSummary(sum);
+}
+
+/* ── RENDER TABLE ──────────────────────────────────── */
+function renderTable(txs) {
+  const body = document.getElementById('tx-body');
+  if (!txs.length) {
+    body.innerHTML = `<tr><td colspan="6" class="empty-state">no transactions found<div class="hint">press + add to get started</div></td></tr>`;
+    return;
+  }
+  body.innerHTML = txs.map((t, i) => `
+    <tr style="animation-delay:${i * .03}s">
+      <td>${t.date_added}</td>
+      <td>${t.description || '<span style="opacity:.4">—</span>'}</td>
+      <td><span class="cat-pill">${t.category}</span></td>
+      <td><span class="tag ${t.is_revenue ? 'tag-in' : 'tag-out'}">${t.is_revenue ? 'in' : 'out'}</span></td>
+      <td style="text-align:right" class="${t.is_revenue ? 'amount-pos' : 'amount-neg'}">
+        ${t.is_revenue ? '+' : '−'}${fmt(t.amount)}
+      </td>
+      <td>
+        <div class="actions">
+          <button class="btn btn-ghost btn-sm" onclick="openEdit(${t.id})">edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteTx(${t.id})">del</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+/* ── RENDER SUMMARY ────────────────────────────────── */
+function renderSummary({ revenue, expenses, net }) {
+  document.getElementById('sum-revenue').textContent  = fmt(revenue);
+  document.getElementById('sum-expenses').textContent = fmt(expenses);
+  const el = document.getElementById('sum-net');
+  el.textContent = (net >= 0 ? '+' : '−') + fmt(Math.abs(net));
+  el.className = `stat-value ${net >= 0 ? 'pos' : 'neg'}`;
+}
+
+/* ── FORMAT ────────────────────────────────────────── */
+function fmt(n) {
+  return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/* ── MODAL OPEN/CLOSE ──────────────────────────────── */
+function openModal() {
+  editingId = null;
+  isRevenue = true;
+  document.getElementById('modal-title').textContent = 'add transaction';
+  document.getElementById('modal-submit').textContent = 'add';
+  document.getElementById('f-amount').value = '';
+  document.getElementById('f-desc').value   = '';
+  document.getElementById('f-date').value   = today.toISOString().split('T')[0];
+  document.getElementById('f-cat').selectedIndex = 0;
+  syncTypeButtons();
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(() => document.getElementById('f-amount').focus(), 180);
+}
+
+function openEdit(id) {
+  // fetch the row and populate
+  fetch(`/api/transactions?month=`).then(() => {});
+  fetch('/api/transactions').then(r => r.json()).then(txs => {
+    // try current view data — faster: just re-fetch all
+    loadAllAndEdit(id);
+  });
+}
+
+async function loadAllAndEdit(id) {
+  const txs = await fetch('/api/transactions').then(r => r.json());
+  const t   = txs.find(x => x.id === id);
+  if (!t) return toast('transaction not found');
+
+  editingId = id;
+  isRevenue = t.is_revenue;
+  document.getElementById('modal-title').textContent  = `edit #${id}`;
+  document.getElementById('modal-submit').textContent = 'save';
+  document.getElementById('f-amount').value = t.amount;
+  document.getElementById('f-desc').value   = t.description || '';
+  document.getElementById('f-date').value   = t.date_added;
+  const catSel = document.getElementById('f-cat');
+  catSel.value = t.category;
+  syncTypeButtons();
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('overlay')) closeModal();
+}
+
+/* ── TYPE TOGGLE ───────────────────────────────────── */
+function setType(rev) {
+  isRevenue = rev;
+  syncTypeButtons();
+}
+function syncTypeButtons() {
+  document.getElementById('btn-revenue').className = `type-btn ${isRevenue ? 'active-in' : ''}`;
+  document.getElementById('btn-expense').className = `type-btn ${!isRevenue ? 'active-out' : ''}`;
+}
+
+/* ── SUBMIT ────────────────────────────────────────── */
+async function submitForm() {
+  const amount = parseFloat(document.getElementById('f-amount').value);
+  const desc   = document.getElementById('f-desc').value.trim();
+  const date   = document.getElementById('f-date').value;
+  const cat    = document.getElementById('f-cat').value;
+
+  if (!amount || amount <= 0) return toast('enter a valid amount');
+  if (!cat)                   return toast('pick a category');
+  if (!date)                  return toast('pick a date');
+
+  const body = { is_revenue: isRevenue, amount, description: desc, category: cat, date_added: date };
+
+  let res;
+  if (editingId) {
+    res = await fetch(`/api/transactions/${editingId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  } else {
+    res = await fetch('/api/transactions', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  }
+
+  if (!res.ok) {
+    const err = await res.json();
+    return toast(err.error || 'error saving');
+  }
+
+  closeModal();
+  toast(editingId ? 'transaction updated' : 'transaction added');
+  loadData();
+}
+
+/* ── DELETE ────────────────────────────────────────── */
+async function deleteTx(id) {
+  if (!confirm(`delete transaction #${id}?`)) return;
+  const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+  if (!res.ok) return toast('error deleting');
+  toast('transaction deleted');
+  loadData();
+}
+
+/* ── TOAST ─────────────────────────────────────────── */
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ── KEYBOARD ──────────────────────────────────────── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    if (document.getElementById('overlay').classList.contains('open')) submitForm();
+  }
+});
+
+init();
+</script>
+</body>
+</html>
