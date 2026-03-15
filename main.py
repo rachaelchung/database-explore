@@ -214,8 +214,8 @@ def prompt_update_fields(existing):
     new_description = val if val else existing["description"]
 
     # --- Category ---
-    print(f"  Category [{existing['category']}]: (Enter to keep)")
-    print("  Press Enter to skip, or choose a new category:")
+    print(f"  Category [{existing['category']}]: ")
+    print("  Choose a new category:")
     val = input("  Change category? (y/n): ").strip().lower()
     new_category = get_category_input() if val == "y" else existing["category"]
 
