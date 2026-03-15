@@ -32,6 +32,7 @@ python3 main.py
 pip install flask
 python backend.py
 ```
+View the ap at http://127.0.0.1:5000
 
 ---
 
